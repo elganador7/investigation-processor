@@ -16,10 +16,11 @@ def get_market_assessment_prompt(investigation: dict) -> str:
     
     Please provide a detailed CURRENT MARKET ASSESSMENT including:
     - Total market size in USD (global and US market)
-    - Current import volumes and values
-    - Portion of the market that would be subject to tariffs if enacted
+    - Current imports to and exports from the US in this sector.
+    - Portion of the US market that would be subject to tariffs if enacted. 
+    You should estimate any downstream supply chains that would be affected, even if they support US companies
     - Key market players and their market shares
-    - Current trade patterns and major exporting countries
+    - Current trade patterns and major exporting and importing countries
     
     Please provide specific data, estimates, and cite sources where possible.
     """
@@ -37,6 +38,7 @@ def get_tariff_impact_prompt(investigation: dict) -> str:
     - Estimated shift in consumption to domestic markets
     - Impact on supply chains and production costs
     - Potential price increases for end consumers
+    - Assessment of the impact to aggregate demand in the impacted market in the US.
     
     Please provide specific data, estimates, and cite sources where possible.
     """
@@ -58,6 +60,118 @@ def get_company_impact_prompt(investigation: dict) -> str:
     - Include both companies that would benefit and those that would be harmed
     
     Please provide specific data, estimates, and cite sources where possible.
+    """
+
+def get_company_list_prompt(investigation: dict) -> str:
+    """Get the company list prompt for step 1 of company impact analysis."""
+    base_info = get_base_investigation_info(investigation)
+    
+    return f"""
+    {base_info}
+    
+    Please provide a comprehensive list of US and overseas companies that could be impacted by this investigation.
+    
+    Focus on:
+    1. **Well-known major players** in the industry
+    2. **Lesser-known but critical companies** that could act as bottlenecks
+    3. **Companies that exist only in either the US or abroad** (not both)
+    4. **Sole-source or near-sole-source suppliers**
+    5. **Companies with specialized expertise or unique products**
+    
+    For each company, provide:
+    - Company name
+    - Country/region of primary operations
+    - Approximate annual revenue (in USD)
+    - Portion of revenue that could be impacted by this investigation (as a percentage)
+    - Brief description of their role in the supply chain
+    - Whether they are US-only, overseas-only, or global
+    
+    Please include at least 15-20 companies, with a mix of large and small players.
+    Focus on companies that would be most significantly affected by tariffs or trade restrictions.
+    """
+
+def get_company_json_prompt(company_list: str) -> str:
+    """Get the prompt to convert company list to JSON format."""
+    return f"""
+    Please convert the following company list into a valid JSON array format.
+    
+    Each company should be represented as a JSON object with these exact fields:
+    - "name": Company name (string)
+    - "country": Country/region of primary operations (string)
+    - "revenue": Approximate annual revenue in USD (number, no commas or currency symbols)
+    - "revenue_impact_percentage": Portion of revenue that could be impacted (number, no % symbol)
+    - "description": Brief description of their role in the supply chain (string)
+    - "geographic_scope": "US-only", "overseas-only", or "global" (string)
+    
+    Company list:
+    {company_list}
+    
+    IMPORTANT: Return ONLY the JSON array, no additional text, no explanations, no markdown formatting.
+    The response should start with [ and end with ].
+    
+    Example format:
+    [
+      {{
+        "name": "Company Name",
+        "country": "United States",
+        "revenue": 1000000000,
+        "revenue_impact_percentage": 25,
+        "description": "Description of role",
+        "geographic_scope": "US-only"
+      }}
+    ]
+    """
+
+def get_individual_company_analysis_prompt(investigation: dict, company_info: dict) -> str:
+    """Get the prompt for individual company analysis."""
+    base_info = get_base_investigation_info(investigation)
+    
+    return f"""
+    {base_info}
+    
+    Please provide a detailed analysis of how {company_info['name']} would be impacted by potential tariffs or restrictions from this investigation.
+    
+    Company Information:
+    - Name: {company_info['name']}
+    - Country: {company_info['country']}
+    - Annual Revenue: ${company_info['revenue']:,}
+    - Revenue Impact Potential: {company_info['revenue_impact_percentage']}%
+    - Role: {company_info['description']}
+    - Geographic Scope: {company_info['geographic_scope']}
+    
+    Please provide a comprehensive analysis including:
+    
+    1. **Current Business Model:**
+    - Primary products/services
+    - Key customers and markets
+    - Supply chain dependencies
+    - Competitive position
+    
+    2. **Direct Impact Assessment:**
+    - How tariffs would affect their specific products/services
+    - Estimated cost increases or revenue losses
+    - Impact on profit margins
+    - Potential for passing costs to customers
+    
+    3. **Strategic Response Options:**
+    - Potential business model adjustments
+    - Supply chain diversification strategies
+    - Geographic expansion or contraction
+    - Product/service modifications
+    
+    4. **Risk Factors:**
+    - Vulnerability to supply chain disruptions
+    - Dependence on specific markets or customers
+    - Regulatory or compliance challenges
+    - Competitive threats or opportunities
+    
+    5. **Long-term Implications:**
+    - Potential for market share gains or losses
+    - Investment and expansion opportunities
+    - Strategic partnerships or acquisitions
+    - Innovation and R&D implications
+    
+    Please provide specific data, estimates, and actionable insights where possible.
     """
 
 def get_additional_considerations_prompt(investigation: dict) -> str:
