@@ -46,7 +46,14 @@ class CompanyImpactProcessor:
                 base_url="https://api.perplexity.ai"
             )
     
-    def call_api(self, prompt: str, investigation_title: str, enable_search=True) -> Dict[str, Any]:
+    def call_api(
+        self, 
+        prompt: str, 
+        investigation_title: str, 
+        enable_search=True, 
+        enable_json=False,
+        temperature=0.1,
+    ) -> Dict[str, Any]:
         """Make API call with error handling and retries."""
         max_retries = 3
         for attempt in range(max_retries):
@@ -60,9 +67,22 @@ class CompanyImpactProcessor:
                             ],
                         ),
                     ]
+                    
+                    if enable_json:
+                        response_mime_type = "application/json"
+                    else:
+                        response_mime_type = "text/plain"
+                    
+                    if enable_search:
+                        tools = [types.Tool(google_search=types.GoogleSearch())]
+                        response_mime_type = "text/plain"
+                    else:
+                        tools = []
+                    
                     generate_content_config = types.GenerateContentConfig(
-                        response_mime_type="text/plain",
-                        temperature=0.1,
+                        response_mime_type=response_mime_type,
+                        temperature=temperature,
+                        tools=tools,
                     )
                     
                     response = self.gemini_client.models.generate_content(
@@ -90,7 +110,7 @@ class CompanyImpactProcessor:
                             }
                         ],
                         max_tokens=4000,
-                        temperature=0.1
+                        temperature=temperature
                     )
                     
                     if response.choices and len(response.choices) > 0:
@@ -127,25 +147,21 @@ class CompanyImpactProcessor:
         print(f"Step 1: Generating company list for {investigation['title']}")
         
         prompt = get_major_company_list_prompt(investigation)
-        result = self.call_api(prompt, investigation['title'], enable_search=True)
+        return self.call_api(prompt, investigation['title'], enable_search=True)
         
-        return result
-    
     def step1b_generate_company_list(self, investigation: Dict[str, str]) -> Dict[str, Any]:
         """Step 1: Generate comprehensive list of companies."""
         print(f"Step 1: Generating company list for {investigation['title']}")
         
         prompt = get_small_company_list_prompt(investigation)
-        result = self.call_api(prompt, investigation['title'], enable_search=True)
-        
-        return result
-    
+        return self.call_api(prompt, investigation['title'], enable_search=True)
+            
     def step2_convert_to_json(self, company_list_content: str, investigation_title: str) -> Dict[str, Any]:
         """Step 2: Convert company list to JSON format."""
         print(f"Step 2: Converting company list to JSON for {investigation_title}")
         
         prompt = get_company_json_prompt(company_list_content)
-        result = self.call_api(prompt, investigation_title, enable_search=False)
+        result = self.call_api(prompt, investigation_title, enable_search=False, enable_json=True)
         
         if result['success']:
             try:
@@ -192,7 +208,7 @@ class CompanyImpactProcessor:
         print(f"\nProcessing investigation: {investigation['title']}")
         
         # Step 1: Generate company list
-        step1a_result = self.step1a_generate_company_list(investigation, 'major')
+        step1a_result = self.step1a_generate_company_list(investigation)
         if not step1a_result['success']:
             return {
                 'investigation': investigation['title'],
@@ -202,7 +218,7 @@ class CompanyImpactProcessor:
                 'error': f"Step 1 failed: {step1a_result['error']}"
             }
             
-        step1b_result = self.step1b_generate_company_list(investigation, 'small')
+        step1b_result = self.step1b_generate_company_list(investigation)
         if not step1b_result['success']:
             return {
                 'investigation': investigation['title'],
