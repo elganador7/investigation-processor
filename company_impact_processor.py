@@ -7,7 +7,8 @@ import pandas as pd
 from dotenv import load_dotenv
 from openai import OpenAI
 from prompts import (
-    get_company_list_prompt, 
+    get_major_company_list_prompt, 
+    get_small_company_list_prompt,
     get_company_json_prompt, 
     get_individual_company_analysis_prompt
 )
@@ -121,11 +122,20 @@ class CompanyImpactProcessor:
             'timestamp': datetime.now().isoformat()
         }
     
-    def step1_generate_company_list(self, investigation: Dict[str, str]) -> Dict[str, Any]:
+    def step1a_generate_company_list(self, investigation: Dict[str, str]) -> Dict[str, Any]:
         """Step 1: Generate comprehensive list of companies."""
         print(f"Step 1: Generating company list for {investigation['title']}")
         
-        prompt = get_company_list_prompt(investigation)
+        prompt = get_major_company_list_prompt(investigation)
+        result = self.call_api(prompt, investigation['title'], enable_search=True)
+        
+        return result
+    
+    def step1b_generate_company_list(self, investigation: Dict[str, str]) -> Dict[str, Any]:
+        """Step 1: Generate comprehensive list of companies."""
+        print(f"Step 1: Generating company list for {investigation['title']}")
+        
+        prompt = get_small_company_list_prompt(investigation)
         result = self.call_api(prompt, investigation['title'], enable_search=True)
         
         return result
@@ -182,24 +192,35 @@ class CompanyImpactProcessor:
         print(f"\nProcessing investigation: {investigation['title']}")
         
         # Step 1: Generate company list
-        step1_result = self.step1_generate_company_list(investigation)
-        if not step1_result['success']:
+        step1a_result = self.step1a_generate_company_list(investigation, 'major')
+        if not step1a_result['success']:
             return {
                 'investigation': investigation['title'],
                 'timestamp': datetime.now().isoformat(),
                 'investigation_data': investigation,
                 'success': False,
-                'error': f"Step 1 failed: {step1_result['error']}"
+                'error': f"Step 1 failed: {step1a_result['error']}"
+            }
+            
+        step1b_result = self.step1b_generate_company_list(investigation, 'small')
+        if not step1b_result['success']:
+            return {
+                'investigation': investigation['title'],
+                'timestamp': datetime.now().isoformat(),
+                'investigation_data': investigation,
+                'step1_result': step1b_result,
+                'success': False,
+                'error': f"Step 1 failed: {step1b_result['error']}"
             }
         
         # Step 2: Convert to JSON
-        step2_result = self.step2_convert_to_json(step1_result['content'], investigation['title'])
+        step2_result = self.step2_convert_to_json(step1a_result['content'] + step1b_result['content'], investigation['title'])
         if not step2_result['success']:
             return {
                 'investigation': investigation['title'],
                 'timestamp': datetime.now().isoformat(),
                 'investigation_data': investigation,
-                'step1_result': step1_result,
+                'step1_result': step1a_result,
                 'success': False,
                 'error': f"Step 2 failed: {step2_result['error']}"
             }
@@ -213,7 +234,8 @@ class CompanyImpactProcessor:
             'investigation': investigation['title'],
             'timestamp': datetime.now().isoformat(),
             'investigation_data': investigation,
-            'step1_company_list': step1_result,
+            'step1a_company_list': step1a_result,
+            'step1b_company_list': step1b_result,
             'step2_json_conversion': step2_result,
             'step3_individual_reports': step3_results,
             'total_companies': len(companies),
@@ -224,7 +246,7 @@ class CompanyImpactProcessor:
     
     def save_results(self, results: Dict[str, Any], base_filename: str = None):
         """Save results to JSON file."""
-        if base_filename is None:
+        if not base_filename:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             base_filename = f"company_impact_analysis_{timestamp}"
         

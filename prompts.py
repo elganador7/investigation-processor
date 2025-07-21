@@ -62,22 +62,57 @@ def get_company_impact_prompt(investigation: dict) -> str:
     Please provide specific data, estimates, and cite sources where possible.
     """
 
-def get_company_list_prompt(investigation: dict) -> str:
+def get_major_company_list_prompt(investigation: dict) -> str:
     """Get the company list prompt for step 1 of company impact analysis."""
     base_info = get_base_investigation_info(investigation)
+    
+    base_company_list_prompt = get_base_company_list_prompt()
     
     return f"""
     {base_info}
     
-    Please provide a comprehensive list of US and overseas companies that could be impacted by this investigation.
+    Please provide a comprehensive list of major US and overseas companies that could be impacted by this investigation.
     
     Focus on:
-    1. **Well-known major players** in the industry
-    2. **Lesser-known but critical companies** that could act as bottlenecks
-    3. **Companies that exist only in either the US or abroad** (not both)
-    4. **Sole-source or near-sole-source suppliers**
-    5. **Companies with specialized expertise or unique products**
+    1. **Well-known major players in the industry**
+    2. **Any product lines from well known players that are impacted by the investigation which cannot easily be replaced because
+    it is only produced in the US or in countries potentially subject to tariffs or restrictions resulting from the investigation**
     
+    Ignore: 
+    1. **Lesser-known but critical companies** that could act as bottlenecks
+    2. **Sole-source or near-sole-source suppliers of products that will be impacted by the investigation**
+    3. **Companies with specialized expertise or unique products**
+    
+    {base_company_list_prompt}
+    """
+
+def get_small_company_list_prompt(investigation: dict) -> str:
+    """Get the company list prompt for step 2 of company impact analysis."""
+    base_info = get_base_investigation_info(investigation)
+    
+    base_company_list_prompt = get_base_company_list_prompt()
+    
+    return f"""
+    {base_info}
+    
+    Please provide a list of major US and overseas companies that could be impacted by this investigation.
+    
+    Focus on:
+    1. **Lesser-known but critical companies** that could act as bottlenecks
+    2. **Sole-source or near-sole-source suppliers of products that will be impacted by the investigation**
+    3. **Companies with specialized expertise or unique products**
+    
+    Ignore: 
+    1. **Well-known major players** in the industry
+    2. **Companies that produce commmoditized products that can easily be replaced**
+    
+    {base_company_list_prompt}
+    """
+
+def get_base_company_list_prompt() -> str:
+    """Get the base company list prompt."""
+    
+    return f"""
     For each company, provide:
     - Company name
     - Country/region of primary operations
@@ -127,10 +162,9 @@ def get_individual_company_analysis_prompt(investigation: dict, company_info: di
     base_info = get_base_investigation_info(investigation)
     
     return f"""
+    Write an equity research report style report on how {company_info['name']} would be impacted by potential tariffs or restrictions from the following US Governmentinvestigation:
     {base_info}
-    
-    Please provide a detailed analysis of how {company_info['name']} would be impacted by potential tariffs or restrictions from this investigation.
-    
+        
     Company Information:
     - Name: {company_info['name']}
     - Country: {company_info['country']}
