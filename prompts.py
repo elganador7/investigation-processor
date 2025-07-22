@@ -170,10 +170,7 @@ def get_individual_company_analysis_prompt(investigation: dict, company_info: di
     Company Information:
     - Name: {company_info['name']}
     - Country: {company_info['country']}
-    - Annual Revenue: ${company_info['revenue']:,}
-    - Revenue Impact Potential: {company_info['revenue_impact_percentage']}%
     - Role: {company_info['description']}
-    - Geographic Scope: {company_info['geographic_scope']}
     
     Please provide a comprehensive, data-driven analysis including:
     
@@ -185,8 +182,7 @@ def get_individual_company_analysis_prompt(investigation: dict, company_info: di
     
     2. **Direct Impact Assessment:**
     - How tariffs would affect their specific products/services
-    - Estimated cost increases or revenue losses (quantitative)
-    - Impact on profit margins, EBITDA, and cash flow
+    - Provide information on where materials and products supporting 
     - Potential for passing costs to customers
     
     3. **Strategic Response Options:**
@@ -208,6 +204,8 @@ def get_individual_company_analysis_prompt(investigation: dict, company_info: di
     - Innovation and R&D implications
     
     **IMPORTANT:**
+    - Make sure you give specific examples of how this specific company would be impacted and how their
+    products in particular would be impacted.
     - The entire report must be concise and fit within 2 printed pages (front and back of a single sheet).
     - Use precise, direct language and avoid unnecessary elaboration.
     - Do not repeat points or restate information in multiple sections.

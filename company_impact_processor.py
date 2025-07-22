@@ -186,7 +186,8 @@ class CompanyImpactProcessor:
         
         results = []
         
-        for i, company in enumerate(companies):
+        for i, company in enumerate(companies[-3:]):
+            if i > 3: break
             print(f"  Processing company {i+1}/{len(companies)}: {company['name']}")
             
             prompt = get_individual_company_analysis_prompt(investigation, company)
